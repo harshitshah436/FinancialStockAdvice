@@ -1,9 +1,0 @@
-com\rit\controller\IndexController.class
-com\rit\controller\StockAppRestController.class
-com\rit\model\Input.class
-com\rit\service\StockService.class
-com\rit\configuration\Initializer.class
-com\rit\model\Stock.class
-com\rit\configuration\CORSFilter.class
-com\rit\configuration\StockAppConfiguration.class
-com\rit\service\StockServiceImpl.class
