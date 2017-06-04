@@ -13,10 +13,8 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.ws.rs.core.UriBuilder;
+import org.apache.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -25,6 +23,7 @@ import org.json.simple.parser.ParseException;
 @Service("stockService")
 public class StockServiceImpl implements StockService {
 
+    private static final Logger LOGGER = Logger.getLogger(StockServiceImpl.class);
     private static final String PARTNER_ID = "91577";
     private static final String KEY = "hExJgaefQzk";
 
@@ -47,13 +46,15 @@ public class StockServiceImpl implements StockService {
 
             List<String> companies = getCompaniesInvokingGlassdoorAPI(location, industryType);
 
-            List<Stock> allStocksWithSymbols = getStockSymbolsInvokingStockSearchAPI(companies);
+            List<Stock> allStocksWithSymbols = getStockSymbolsInvokingYahooFinanceAPI(companies);
 
             for (Stock stock : allStocksWithSymbols) {
 
-                TimeUnit.MILLISECONDS.sleep(2100);
-
+//                TimeUnit.MILLISECONDS.sleep(2100);
                 double stockPrice = getStockPriceInvokingGoogleFinanceAPI(stock.getSymbol());
+                if (stockPrice == -1) {
+                    continue;
+                }
                 stock.setPrice(stockPrice);
 
                 String response200 = getSimpleMovingAverageInvokingMarketOnDemandAPI(stock.getSymbol(), 200);
@@ -86,8 +87,8 @@ public class StockServiceImpl implements StockService {
 
             Collections.sort(stocks);
 
-        } catch (UnsupportedEncodingException | ParseException | InterruptedException ex) {
-            Logger.getLogger(StockServiceImpl.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (UnsupportedEncodingException | ParseException ex) {
+            LOGGER.fatal(null, ex);
         }
     }
 
@@ -131,7 +132,7 @@ public class StockServiceImpl implements StockService {
     }
 
     @Override
-    public List<Stock> getStockSymbolsInvokingStockSearchAPI(List<String> companies) throws UnsupportedEncodingException, ParseException {
+    public List<Stock> getStockSymbolsInvokingYahooFinanceAPI(List<String> companies) throws UnsupportedEncodingException, ParseException {
 
         List<Stock> allStocksWithSymbols = new ArrayList<>();
 
@@ -144,15 +145,11 @@ public class StockServiceImpl implements StockService {
 
             Client client = Client.create(config);
             WebResource wr = client.resource(
-                    UriBuilder.fromUri("http://chstocksearch.herokuapp.com/api/"
-                            + URLEncoder.encode(stock.getCompanyName(), "UTF-8").replace("+", "%20")).build());
+                    UriBuilder.fromUri("http://d.yimg.com/autoc.finance.yahoo.com/autoc?query="
+                            + URLEncoder.encode(stock.getCompanyName(), "UTF-8").replace("+", "%20") + "&region=1&lang=en").build());
 
             ClientResponse response = wr.accept("application/json")
                     .get(ClientResponse.class);
-
-            if (response.getStatus() == 404) {
-                continue;
-            }
 
             if (response.getStatus() != 200) {
                 throw new RuntimeException("Failed : HTTP error code : "
@@ -160,18 +157,17 @@ public class StockServiceImpl implements StockService {
             }
 
             String json_response = response.getEntity(String.class);
-            //System.out.println(json_response);
 
             JSONParser parser = new JSONParser();
-            JSONArray array = (JSONArray) parser.parse(json_response);
-
-            if (array.size() > 0) {
-                for (int i = 0; i < array.size(); i++) {
-                    JSONObject obj = (JSONObject) array.get(i);
-                    stock.setSymbol(obj.get("symbol").toString());
-                    allStocksWithSymbols.add(stock);
-                    System.out.println(obj.get("symbol"));
-                }
+            JSONObject responseFromAPI = (JSONObject) parser.parse(json_response);
+            JSONObject resultSet = (JSONObject) responseFromAPI.get("ResultSet");
+            JSONArray result = (JSONArray) resultSet.get("Result");
+            if (result.size() > 0) {
+                JSONObject obj = (JSONObject) result.get(0);
+                stock.setSymbol(obj.get("symbol").toString());
+                allStocksWithSymbols.add(stock);
+                System.out.println(obj.get("symbol"));
+//                Logger.getLogger(KEY, json_response);
             }
 
         }
@@ -189,6 +185,11 @@ public class StockServiceImpl implements StockService {
         ClientResponse response = service.accept("application/json")
                 .get(ClientResponse.class);
 
+        if (response.getStatus() == 400) {
+            LOGGER.warn("Not able to find stock price invoking google finance API for a symbol: " + symbol);
+            return -1;
+        }
+
         String json_response = response.getEntity(String.class);
         JSONParser parser = new JSONParser();
         JSONArray array = (JSONArray) parser.parse(json_response.replace("//", ""));
@@ -196,7 +197,7 @@ public class StockServiceImpl implements StockService {
         double price = 0;
         if (array.size() > 0) {
             JSONObject obj = (JSONObject) array.get(0);
-            price = Double.parseDouble(obj.get("l").toString());
+            price = Double.parseDouble(obj.get("l").toString().replaceAll(",", ""));
         }
 
         return price;
@@ -220,17 +221,13 @@ public class StockServiceImpl implements StockService {
 //                json_response = response.getEntity(String.class);
 //                System.out.println(json_response);
         if (response.getStatus() != 200 && response.getStatus() != 500) {
-            System.err.println(response.getEntity(String.class
-            ));
-//            throw new RuntimeException("Failed : HTTP error code : "
-//                    + response.getStatus());
+            System.err.println(response.getEntity(String.class));
         }
 
         String json_response = "";
 
         if (response.getStatus() != 500 && response.getStatus() != 501) {
-            json_response = response.getEntity(String.class
-            );
+            json_response = response.getEntity(String.class);
             System.out.println(json_response);
         }
 
@@ -252,7 +249,6 @@ public class StockServiceImpl implements StockService {
 
         obj = (JSONObject) obj.get("sma");
         arrayElements = (JSONArray) obj.get("values");
-        System.out.println(arrayElements);
         return result + ":" + Double.parseDouble(arrayElements.get(arrayElements.size() - 1).toString());
     }
 

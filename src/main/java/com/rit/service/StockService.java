@@ -14,7 +14,7 @@ public interface StockService {
     
     List<String> getCompaniesInvokingGlassdoorAPI(String location, String industryType) throws ParseException, UnsupportedEncodingException;
     
-    List<Stock> getStockSymbolsInvokingStockSearchAPI(List<String> companies) throws UnsupportedEncodingException, ParseException;
+    List<Stock> getStockSymbolsInvokingYahooFinanceAPI(List<String> companies) throws UnsupportedEncodingException, ParseException;
     
     double getStockPriceInvokingGoogleFinanceAPI(String symbol) throws ParseException;
     
