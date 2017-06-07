@@ -16,17 +16,36 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.rit.model.Stock;
 import com.rit.service.StockService;
 
+/**
+ * StockAppRestController handles all application requests, calls the service,
+ * performs respective operations, and returns respective views.
+ *
+ * @author Harshit
+ */
 @RestController
 public class StockAppRestController {
 
+    /**
+     * Tells the application context to inject an instance of StockService here.
+     */
     @Autowired
     StockService stockService;
 
+    /**
+     * Receive GET request '/index'.
+     *
+     * @return empty body in the response
+     */
     @RequestMapping(value = "/index", method = RequestMethod.GET)
     public ResponseEntity<List<Stock>> index() {
         return new ResponseEntity("", HttpStatus.OK);
     }
 
+    /**
+     * Receive GET request '/index/stocks'.
+     *
+     * @return list of stocks to display
+     */
     @RequestMapping(value = "/index/stocks", method = RequestMethod.GET)
     public ResponseEntity<List<Stock>> listOfAllStocks() {
         List<Stock> stocks = stockService.findAllStocks();
@@ -36,11 +55,19 @@ public class StockAppRestController {
         return new ResponseEntity<>(stocks, HttpStatus.OK);
     }
 
+    /**
+     * Receive POST request '/index'.
+     *
+     * @param input requestBody containing Input object
+     * @param ucBuilder
+     * @return New location after receiving POST request
+     */
     @RequestMapping(value = "/index/", method = RequestMethod.POST)
     public ResponseEntity<Void> findStocks(@RequestBody Input input, UriComponentsBuilder ucBuilder) {
 
         stockService.getStocksForFinancialAdvice(input.getLocation(), input.getIndustry());
 
+        // Create HttpHeaders and setLocation to "index" route
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(ucBuilder.path("/index").build().toUri());
         return new ResponseEntity<>(headers, HttpStatus.CREATED);

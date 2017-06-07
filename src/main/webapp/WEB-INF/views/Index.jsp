@@ -15,7 +15,7 @@
         <link href="<c:url value='/static/css/app.css' />" rel="stylesheet"></link>
     </head>
     <body ng-app="myApp" class="ng-cloak">
-        <div class="generic-container" ng-controller="StockController as ctrl">
+        <div class="generic-container" ng-controller="stockController as ctrl">
             <div class="panel panel-default">
                 <div class="panel-heading"><span class="lead">Financial Advice within specific Location and Industry </span></div>
                 <div class="formcontainer">
@@ -92,14 +92,14 @@
                 </span>
             </div>
             <span us-spinner="{radius:30, width:8, length: 16}"></span>
-    </div>
+        </div>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.4/angular.js"></script>
-    <script src="<c:url value='/static/js/app.js' />"></script>
-    <script src="<c:url value='/static/js/service/stock_service.js' />"></script>
-    <script src="<c:url value='/static/js/controller/stock_controller.js' />"></script>
-    <script src="<c:url value='/static/js/angular-spinner.min.js' />"></script>
-    <script src="<c:url value='/static/js/angular-loading-spinner.js' />"></script>
-    <script type="text/javascript" src="http://fgnass.github.io/spin.js/spin.min.js"></script>
-</body>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.4/angular.js"></script>
+        <script src="<c:url value='/static/js/app.js' />"></script>
+        <script src="<c:url value='/static/js/service/stockService.js' />"></script>
+        <script src="<c:url value='/static/js/controller/stockController.js' />"></script>
+        <script src="<c:url value='/static/js/angular-spinner.min.js' />"></script>
+        <script src="<c:url value='/static/js/angular-loading-spinner.js' />"></script>
+        <script type="text/javascript" src="http://fgnass.github.io/spin.js/spin.min.js"></script>
+    </body>
 </html>

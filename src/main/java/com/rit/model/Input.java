@@ -1,15 +1,12 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.rit.model;
 
 /**
+ * Input class to model location and industry details.
  *
  * @author Harshit
  */
 public class Input {
+
     String location;
     String industry;
 
@@ -28,5 +25,4 @@ public class Input {
     public void setIndustry(String industry) {
         this.industry = industry;
     }
-    
 }

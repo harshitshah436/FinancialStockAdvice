@@ -13,17 +13,26 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.ws.rs.core.UriBuilder;
-import org.apache.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+/**
+ * StockServiceImpl implements StockService class and calls all apis, gets
+ * stocks information.
+ *
+ * @author Harshit
+ */
 @Service("stockService")
 public class StockServiceImpl implements StockService {
 
-    private static final Logger LOGGER = Logger.getLogger(StockServiceImpl.class);
+    private static final Logger LOGGER = Logger.getLogger(StockServiceImpl.class.getName());
+
+    // KEY and PartnerID for marketOnDamand apis.
     private static final String PARTNER_ID = "91577";
     private static final String KEY = "hExJgaefQzk";
 
@@ -33,30 +42,46 @@ public class StockServiceImpl implements StockService {
         stocks = new ArrayList<>();
     }
 
+    /**
+     * @return a list of Stock objects containing stock details.
+     */
     @Override
     public List<Stock> findAllStocks() {
         return stocks;
     }
 
+    /**
+     * This method calls all APIs, makes Stock objects and sorts them by
+     * descending order of SMA difference.
+     *
+     * @param location
+     * @param industryType
+     */
     @Override
     public void getStocksForFinancialAdvice(String location, String industryType) {
         try {
-
             stocks = new ArrayList<>();
 
+            // Calling glassdoor api to get companies list.
             List<String> companies = getCompaniesInvokingGlassdoorAPI(location, industryType);
+            if (companies.isEmpty()) {
+                return;
+            }
 
+            // Calling yahoo finance api to get stock symbols by company name.
             List<Stock> allStocksWithSymbols = getStockSymbolsInvokingYahooFinanceAPI(companies);
 
             for (Stock stock : allStocksWithSymbols) {
-
 //                TimeUnit.MILLISECONDS.sleep(2100);
+
+                // Calling google finance api to get Stock price.
                 double stockPrice = getStockPriceInvokingGoogleFinanceAPI(stock.getSymbol());
                 if (stockPrice == -1) {
-                    continue;
+                    continue; // if no stock price found for the symbol, ignore current stock.
                 }
                 stock.setPrice(stockPrice);
 
+                // Calling marketOnDemand api to get simple moving average of a stock for last 200 days.
                 String response200 = getSimpleMovingAverageInvokingMarketOnDemandAPI(stock.getSymbol(), 200);
                 String symbol_sma = "";
                 if (!response200.isEmpty()) {
@@ -67,6 +92,7 @@ public class StockServiceImpl implements StockService {
                 }
                 String[] temp = symbol_sma.split(":");
 
+                // Calling marketOnDemand api to get simple moving average of a stock for last 50 days.
                 String response50 = getSimpleMovingAverageInvokingMarketOnDemandAPI(stock.getSymbol(), 50);
                 if (!response50.isEmpty()) {
                     symbol_sma = parseJsonForSimpleMovingAverage(response50);
@@ -76,26 +102,41 @@ public class StockServiceImpl implements StockService {
                 }
                 String[] temp1 = symbol_sma.split(":");
 
+                // Set SMA difference by subtracting 'sma of last 200 days' from
+                // 'sma of last 50 days' for a stock price.
                 stock.setSma200(Double.parseDouble(temp[1]));
                 stock.setSma50(Double.parseDouble(temp1[1]));
                 stock.setSmaDiff(stock.getSma50() - stock.getSma200());
                 if (!stocks.contains(stock)) {
                     stocks.add(stock);
                 }
-
             }
 
+            // Sort in descending order of sma_diff
             Collections.sort(stocks);
 
         } catch (UnsupportedEncodingException | ParseException ex) {
-            LOGGER.fatal(null, ex);
+            LOGGER.log(Level.SEVERE, null, ex);
         }
     }
 
+    /**
+     * This method sends a request to Glassdoor API with location and
+     * industryType and it will get list of employers from the response.
+     *
+     * @param location
+     * @param industryType
+     *
+     * @return a list of companies/employers
+     * @throws ParseException
+     * @throws UnsupportedEncodingException
+     */
     @Override
     public List<String> getCompaniesInvokingGlassdoorAPI(String location, String industryType) throws ParseException, UnsupportedEncodingException {
-        ClientConfig config = new DefaultClientConfig();
+        LOGGER.log(Level.INFO, "Calling glassdoor api for getting a list of companies by location and industry.");
 
+        // Creating a web resource
+        ClientConfig config = new DefaultClientConfig();
         Client client = Client.create(config);
         WebResource wr = client.resource(
                 UriBuilder.fromUri("http://api.glassdoor.com/api/api.htm?v=1&format=json"
@@ -105,7 +146,7 @@ public class StockServiceImpl implements StockService {
                         + "&userip=129.21.101.101"
                         + "&useragent=Mozilla/%2F4.0").build());
 
-        // getting JSON data
+        // Sending get request and receiving JSON data
         ClientResponse response = wr.accept("application/json")
                 .get(ClientResponse.class);
 
@@ -116,7 +157,7 @@ public class StockServiceImpl implements StockService {
 
         String json_response = response.getEntity(String.class);
 
-        //System.out.println(json_response);
+        // Get 'employers' array from json response.
         JSONParser parser = new JSONParser();
         JSONObject obj = (JSONObject) parser.parse(json_response);
         JSONObject response_obj = (JSONObject) obj.get("response");
@@ -126,13 +167,25 @@ public class StockServiceImpl implements StockService {
         for (Object array1 : employers_array) {
             JSONObject employer_obj = (JSONObject) array1;
             companies.add(employer_obj.get("name").toString());
+            LOGGER.log(Level.INFO, employer_obj.get("name").toString());
         }
 
         return companies;
     }
 
+    /**
+     * Get stock symbol for the given list of company names invoking Yahoo
+     * Finance API.
+     *
+     * @param companies a list of companies
+     *
+     * @return a list of stock symbol for given companies
+     * @throws UnsupportedEncodingException
+     * @throws ParseException
+     */
     @Override
     public List<Stock> getStockSymbolsInvokingYahooFinanceAPI(List<String> companies) throws UnsupportedEncodingException, ParseException {
+        LOGGER.log(Level.INFO, "Calling yahoo finance api for retrieving stock symbols by company names.");
 
         List<Stock> allStocksWithSymbols = new ArrayList<>();
 
@@ -141,13 +194,14 @@ public class StockServiceImpl implements StockService {
             Stock stock = new Stock();
             stock.setCompanyName(company);
 
+            // Creating a web resource
             ClientConfig config = new DefaultClientConfig();
-
             Client client = Client.create(config);
             WebResource wr = client.resource(
                     UriBuilder.fromUri("http://d.yimg.com/autoc.finance.yahoo.com/autoc?query="
                             + URLEncoder.encode(stock.getCompanyName(), "UTF-8").replace("+", "%20") + "&region=1&lang=en").build());
 
+            // Sending get request and receiving JSON data
             ClientResponse response = wr.accept("application/json")
                     .get(ClientResponse.class);
 
@@ -158,6 +212,7 @@ public class StockServiceImpl implements StockService {
 
             String json_response = response.getEntity(String.class);
 
+            // Get a symbol property from the received json response.
             JSONParser parser = new JSONParser();
             JSONObject responseFromAPI = (JSONObject) parser.parse(json_response);
             JSONObject resultSet = (JSONObject) responseFromAPI.get("ResultSet");
@@ -166,45 +221,70 @@ public class StockServiceImpl implements StockService {
                 JSONObject obj = (JSONObject) result.get(0);
                 stock.setSymbol(obj.get("symbol").toString());
                 allStocksWithSymbols.add(stock);
-                System.out.println(obj.get("symbol"));
-//                Logger.getLogger(KEY, json_response);
+                LOGGER.log(Level.INFO, obj.get("symbol").toString());
+            } else {
+                LOGGER.log(Level.WARNING, "Not able to find stock symbol for the company: {0}", company);
             }
-
         }
         return allStocksWithSymbols;
     }
 
+    /**
+     * Get current stock price invoking Google Finance API for the given stock
+     * symbol.
+     *
+     * @param symbol stock symbol
+     *
+     * @return current stock price for the given stock symbol
+     * @throws ParseException
+     */
     @Override
     public double getStockPriceInvokingGoogleFinanceAPI(String symbol) throws ParseException {
+        LOGGER.log(Level.INFO, "Calling google finance api for getting stock price by stock symbol: {0}", symbol);
+
+        // Creating a web resource
         ClientConfig config = new DefaultClientConfig();
         Client client = Client.create(config);
         WebResource service = client.resource(
                 UriBuilder.fromUri("http://finance.google.com/finance/info?q="
                         + symbol).build());
 
+        // Sending get request and receiving JSON data
         ClientResponse response = service.accept("application/json")
                 .get(ClientResponse.class);
 
         if (response.getStatus() == 400) {
-            LOGGER.warn("Not able to find stock price invoking google finance API for a symbol: " + symbol);
+            LOGGER.log(Level.WARNING, "Not able to find stock price invoking google finance API for a symbol: {0}", symbol);
             return -1;
         }
 
         String json_response = response.getEntity(String.class);
+
+        // Get stock price from the received response.
         JSONParser parser = new JSONParser();
         JSONArray array = (JSONArray) parser.parse(json_response.replace("//", ""));
-
         double price = 0;
         if (array.size() > 0) {
             JSONObject obj = (JSONObject) array.get(0);
             price = Double.parseDouble(obj.get("l").toString().replaceAll(",", ""));
         }
-
         return price;
     }
 
+    /**
+     * Get simple moving average (SMA) by calling marketOnDemand API by given
+     * number of days and stock symbol.
+     *
+     * @param symbol
+     * @param period number of days
+     * @return SMA
+     * @throws UnsupportedEncodingException
+     */
     @Override
     public String getSimpleMovingAverageInvokingMarketOnDemandAPI(String symbol, int period) throws UnsupportedEncodingException {
+        LOGGER.log(Level.INFO, "Calling marketOnDemand api for getting simple moving average (SMA) difference from a given stock symbol: {0} and number of days: {1}", new Object[]{symbol, period});
+
+        // Creating a web resource
         ClientConfig config = new DefaultClientConfig();
         Client client = Client.create(config);
         WebResource service = client.resource(
@@ -214,42 +294,43 @@ public class StockServiceImpl implements StockService {
                         + URLEncoder.encode("\",\"Type\":\"sma\",\"Params\":["
                                 + period + "]}]}", "UTF-8")).build());
 
+        // Sending get request and receiving JSON data
         ClientResponse response = service.accept("application/json")
-                .get(ClientResponse.class
-                );
+                .get(ClientResponse.class);
 
-//                json_response = response.getEntity(String.class);
-//                System.out.println(json_response);
         if (response.getStatus() != 200 && response.getStatus() != 500) {
-            System.err.println(response.getEntity(String.class));
+            LOGGER.log(Level.SEVERE, response.getEntity(String.class));
         }
 
         String json_response = "";
-
         if (response.getStatus() != 500 && response.getStatus() != 501) {
             json_response = response.getEntity(String.class);
-            System.out.println(json_response);
         }
-
         return json_response;
     }
 
-    public String parseJsonForSimpleMovingAverage(String response200) throws ParseException {
+    /**
+     * Parse Json response and return simple moving average.
+     *
+     * @param response response from MarketOnDemand API
+     * @return a string with SMA. format: "stock_symbol: sma_value"
+     * @throws ParseException
+     */
+    public String parseJsonForSimpleMovingAverage(String response) throws ParseException {
         String result;
+
+        // Get simple moving average from the json response.
         JSONParser parser = new JSONParser();
-        JSONObject obj = (JSONObject) parser.parse(response200);
+        JSONObject obj = (JSONObject) parser.parse(response);
         JSONArray arrayElements = (JSONArray) obj.get("Elements");
         obj = (JSONObject) arrayElements.get(0);
         result = obj.get("Symbol").toString();
         obj = (JSONObject) obj.get("DataSeries");
-
         if (obj == null) {
             return "";
         }
-
         obj = (JSONObject) obj.get("sma");
         arrayElements = (JSONArray) obj.get("values");
         return result + ":" + Double.parseDouble(arrayElements.get(arrayElements.size() - 1).toString());
     }
-
 }

@@ -1,5 +1,12 @@
 package com.rit.model;
 
+/**
+ * Stock class containing all details like symbol, name, price and SMA
+ * differences. It also implements comparable interface to sort stocks in
+ * descending order of SMA difference.
+ *
+ * @author Harshit
+ */
 public class Stock implements Comparable<Stock> {
 
     private String symbol;
@@ -66,5 +73,4 @@ public class Stock implements Comparable<Stock> {
     public int compareTo(Stock stock) {
         return (stock.smaDiff - this.smaDiff) >= 0 ? 1 : -1;
     }
-
 }
