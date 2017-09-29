@@ -1,6 +1,6 @@
-package com.rit.controller;
+package edu.rit.controller;
 
-import com.rit.model.Input;
+import edu.rit.model.Input;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.rit.model.Stock;
-import com.rit.service.StockService;
+import edu.rit.model.Stock;
+import edu.rit.service.StockService;
 
 /**
  * StockAppRestController handles all application requests, calls the service,

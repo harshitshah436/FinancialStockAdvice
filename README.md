@@ -21,8 +21,9 @@ Author: Harshit Shah
   - Other API
     - ~~[CHStockSearch API](http://chstocksearch.herokuapp.com/welcome)~~ (obsoleted)
     - [Yahoo Finance API](http://d.yimg.com/autoc.finance.yahoo.com/autoc?query=xerox&region=1&lang=en)
-    - [Google Finance API](http://finance.google.com/finance/info?q=INTU)
+    - ~~[Google Finance API](http://finance.google.com/finance/info?q=INTU)~~ (depreciated)
     - [Market On Demand Market Data API](http://dev.markitondemand.com/MODApis/)
+    - [Quandl financial data API](https://www.quandl.com/tools/api)
 
 ### Algorithm Implemented
 - Buy 50 shares of a stock when its 50-day simple moving average goes above the 200-day moving average.

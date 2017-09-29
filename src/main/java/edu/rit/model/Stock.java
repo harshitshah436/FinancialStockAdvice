@@ -1,4 +1,4 @@
-package com.rit.model;
+package edu.rit.model;
 
 /**
  * Stock class containing all details like symbol, name, price and SMA

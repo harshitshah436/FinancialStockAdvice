@@ -1,4 +1,4 @@
-package com.rit.configuration;
+package edu.rit.configuration;
 
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -17,7 +17,7 @@ import org.springframework.web.servlet.view.JstlView;
  */
 @Configuration
 @EnableWebMvc
-@ComponentScan(basePackages = "com.rit")
+@ComponentScan(basePackages = "edu.rit")
 public class StockAppConfiguration extends WebMvcConfigurerAdapter {
 
     /**
@@ -35,7 +35,7 @@ public class StockAppConfiguration extends WebMvcConfigurerAdapter {
     }
 
     /**
-     * Adds resourse handlers for available application resources.
+     * Adds resource handlers for available application resources.
      *
      * @param registry
      */

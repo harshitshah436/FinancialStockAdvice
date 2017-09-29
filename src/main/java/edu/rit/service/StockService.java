@@ -1,7 +1,7 @@
-package com.rit.service;
+package edu.rit.service;
 
 import java.util.List;
-import com.rit.model.Stock;
+import edu.rit.model.Stock;
 import java.io.UnsupportedEncodingException;
 import org.json.simple.parser.ParseException;
 
@@ -21,7 +21,7 @@ public interface StockService {
 
     List<Stock> getStockSymbolsInvokingYahooFinanceAPI(List<String> companies) throws UnsupportedEncodingException, ParseException;
 
-    double getStockPriceInvokingGoogleFinanceAPI(String symbol) throws ParseException;
+    double getStockPriceInvokingQuandlFinancialDataAPI(String symbol) throws ParseException;
 
     String getSimpleMovingAverageInvokingMarketOnDemandAPI(String symbol, int period) throws UnsupportedEncodingException;
 

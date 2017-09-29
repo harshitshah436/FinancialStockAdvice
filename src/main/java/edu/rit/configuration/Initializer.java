@@ -1,4 +1,4 @@
-package com.rit.configuration;
+package edu.rit.configuration;
 
 import javax.servlet.Filter;
 

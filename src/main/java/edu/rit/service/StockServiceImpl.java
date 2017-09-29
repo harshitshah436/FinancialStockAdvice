@@ -1,8 +1,8 @@
-package com.rit.service;
+package edu.rit.service;
 
 import org.springframework.stereotype.Service;
 
-import com.rit.model.Stock;
+import edu.rit.model.Stock;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -75,7 +75,7 @@ public class StockServiceImpl implements StockService {
 //                TimeUnit.MILLISECONDS.sleep(2100);
 
                 // Calling google finance api to get Stock price.
-                double stockPrice = getStockPriceInvokingGoogleFinanceAPI(stock.getSymbol());
+                double stockPrice = getStockPriceInvokingQuandlFinancialDataAPI(stock.getSymbol());
                 if (stockPrice == -1) {
                     continue; // if no stock price found for the symbol, ignore current stock.
                 }
@@ -230,7 +230,7 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
-     * Get current stock price invoking Google Finance API for the given stock
+     * Get current stock price invoking Quandl financial data API for the given stock
      * symbol.
      *
      * @param symbol stock symbol
@@ -239,22 +239,24 @@ public class StockServiceImpl implements StockService {
      * @throws ParseException
      */
     @Override
-    public double getStockPriceInvokingGoogleFinanceAPI(String symbol) throws ParseException {
-        LOGGER.log(Level.INFO, "Calling google finance api for getting stock price by stock symbol: {0}", symbol);
+    public double getStockPriceInvokingQuandlFinancialDataAPI(String symbol) throws ParseException {
+        LOGGER.log(Level.INFO, "Calling Quandl financial data API for getting stock price by stock symbol: {0}", symbol);
 
+        // API Key to invoke API
+        final String apiKEY = "4VQgQ5WYT1Fav_vgqc6o";
         // Creating a web resource
         ClientConfig config = new DefaultClientConfig();
         Client client = Client.create(config);
         WebResource service = client.resource(
-                UriBuilder.fromUri("http://finance.google.com/finance/info?q="
-                        + symbol).build());
+                UriBuilder.fromUri("https://www.quandl.com/api/v1/datasets/WIKI/"
+                        + symbol + ".json?api_key" + apiKEY).build());
 
         // Sending get request and receiving JSON data
         ClientResponse response = service.accept("application/json")
                 .get(ClientResponse.class);
 
-        if (response.getStatus() == 400) {
-            LOGGER.log(Level.WARNING, "Not able to find stock price invoking google finance API for a symbol: {0}", symbol);
+        if (response.getStatus() == 404) {
+            LOGGER.log(Level.WARNING, "Not able to find stock price invoking Quandl financial data API for a symbol: {0}", symbol);
             return -1;
         }
 
@@ -262,12 +264,9 @@ public class StockServiceImpl implements StockService {
 
         // Get stock price from the received response.
         JSONParser parser = new JSONParser();
-        JSONArray array = (JSONArray) parser.parse(json_response.replace("//", ""));
-        double price = 0;
-        if (array.size() > 0) {
-            JSONObject obj = (JSONObject) array.get(0);
-            price = Double.parseDouble(obj.get("l").toString().replaceAll(",", ""));
-        }
+        JSONObject apiResponse = (JSONObject) parser.parse(json_response);
+        JSONArray array = (JSONArray) apiResponse.get("data");
+        double price = Double.parseDouble(((JSONArray) array.get(0)).get(1).toString());
         return price;
     }
 

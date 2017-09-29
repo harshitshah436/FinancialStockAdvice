@@ -1,4 +1,4 @@
-package com.rit.model;
+package edu.rit.model;
 
 /**
  * Input class to model location and industry details.
